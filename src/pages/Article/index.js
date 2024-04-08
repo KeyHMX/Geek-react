@@ -16,15 +16,16 @@ import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import img404 from "@/assets/error.png";
 import { useChannel } from "@/hooks/useChannel";
 import { useEffect, useState } from "react";
-import { getArticleListAPI } from "@/apis/article";
+import { delArticleAPI, getArticleListAPI } from "@/apis/article";
 import {Popconfirm} from 'antd'
 const { Option } = Select;
 const { RangePicker } = DatePicker;
 
 const Article = () => {
-
-  const onConfirm = ()=>{
-    console.log('删除点击了')
+  //删除的弹窗
+  const onConfirm = (data)=>{
+    console.log('删除点击了',data)
+    delArticleAPI(data.id)
   }
   //2 初始化用户选择的表单数据
   //注意这里要用中括号不能用大括号，因为并非解构，而且reqData已经是一个对象了
@@ -87,17 +88,18 @@ const Article = () => {
             <Popconfirm
               title="删除文章"
               description="确定删除？"
-              onConfirm={onConfirm}
+              onConfirm={()=>onConfirm(data)}
               
               okText="Yes"
               cancelText="No"
-            ></Popconfirm>
+            >
             <Button
               type="primary"
               danger
               shape="circle"
               icon={<DeleteOutlined />}
             />
+            </Popconfirm>
           </Space>
         );
       },
