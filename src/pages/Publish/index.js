@@ -11,13 +11,13 @@ import {
   message,
 } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import "./index.scss";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
-import {  useState } from "react";
+import {  useEffect, useState } from "react";
 
-import { creaeteArticleAPI } from "@/apis/article";
+import { creaeteArticleAPI, getArticleById, updateArticleAPI } from "@/apis/article";
 import { useChannel } from "@/hooks/useChannel";
 
 const { Option } = Select;
@@ -44,11 +44,28 @@ const Publish = () => {
       content,
       cover: {
         type: imageType,
-        images: imageList.map(item=>item.response.data.url),
+        //这里的url处理只适配于新增的时候
+        //编辑的时候也要适配
+        images: imageList.map(
+          item=>{
+            if(item.response){
+              return item.response.data.url
+            }else{
+              return item.url
+            }
+          }
+        )
       },
       channel_id,
     };
-    await creaeteArticleAPI(reqData);
+    //新增-新增接口 编辑 - 编辑接口
+    if (articleId){
+      //调用编辑接口
+      await updateArticleAPI({...reqData,id:articleId})
+    }else{
+      await creaeteArticleAPI(reqData);
+    }
+    
     message.success("发布文章成功");
   };
   const onUploadChange = (info)=>{
@@ -60,6 +77,33 @@ const Publish = () => {
     const target = e.target.value
     setImageType(target)
   }
+
+  //回填数据
+  const [searchParams] = useSearchParams()
+  const articleId = searchParams.get('id')
+  const [form] =Form.useForm()
+  console.log(articleId)
+  useEffect(()=>{
+    //通过id获取数据
+      async function getArticleDetail(){
+        const res = await getArticleById(articleId)
+        form.setFieldsValue({
+          ...res.data,
+          type:res.data.cover.type
+
+        })//注意要加s
+        setImageType(res.data.cover.type)
+        setImageList(res.data.cover.images.map(url=>{
+          return {url}
+        }))
+      }
+      //article在才回填
+      if(articleId){
+        getArticleDetail()
+      }
+      
+    //调用实例方法，完成回填
+  },[articleId,form])
   return (
     <div className="publish">
       <Card
@@ -67,7 +111,7 @@ const Publish = () => {
           <Breadcrumb
             items={[
               { title: <Link to={"/"}>首页</Link> },
-              { title: "发布文章" },
+              { title: `${articleId?'编辑':'发布'}文章` },
             ]}
           />
         }
@@ -77,6 +121,7 @@ const Publish = () => {
           wrapperCol={{ span: 16 }}
           initialValues={{ type: 0 }}
           onFinish={onFinish}
+          form={form}
         >
           <Form.Item
             label="标题"
@@ -115,6 +160,7 @@ const Publish = () => {
             onChange={onUploadChange}
             maxCount={imageType}
             // multiple={imageType>1}
+            fileList={imageList}//绑定图片
             >
               <div style={{ marginTop: 8 }}>
                 <PlusOutlined />
